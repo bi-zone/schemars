@@ -213,19 +213,25 @@ fn expr_for_internal_tagged_enum<'a>(
 
             let name = variant.name();
 
-            let mut tag_schema = quote! {
+            let tag_schema = quote! {
                 schemars::_private::new_internally_tagged_enum(#tag_name, #name, #deny_unknown_fields)
             };
 
-            variant.attrs.as_metadata().apply_to_schema(&mut tag_schema);
+            let mut variant_scheme = if variant.is_unit() && variant.attrs.with.is_none() {
+                tag_schema
+            } else {
+                let sub_schema = expr_for_untagged_enum_variant(variant, deny_unknown_fields);
+                quote! {
+                    schemars::_private::combine_tag_and_variant({#tag_schema}, {#sub_schema})
+                }
+            };
 
-            if let Some(variant_schema) =
-                expr_for_untagged_enum_variant_for_flatten(variant, deny_unknown_fields)
-            {
-                tag_schema.extend(quote!(.flatten(#variant_schema)))
-            }
+            variant
+                .attrs
+                .as_metadata()
+                .apply_to_schema(&mut variant_scheme);
 
-            tag_schema
+            variant_scheme
         })
         .collect();
 

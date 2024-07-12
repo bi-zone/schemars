@@ -123,6 +123,19 @@ pub fn new_internally_tagged_enum(
     })
 }
 
+pub fn combine_tag_and_variant(
+    tag: Schema,
+    variant: Schema,
+) -> Schema {
+    if variant.is_ref() {
+        let mut obj = SchemaObject::default();
+        obj.subschemas().all_of = Some(vec![tag, variant]);
+        Schema::Object(obj)
+    } else {
+        tag.flatten(variant)
+    }
+}
+
 pub fn insert_object_property<T: ?Sized + JsonSchema>(
     obj: &mut ObjectValidation,
     key: &str,
